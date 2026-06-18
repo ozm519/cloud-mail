@@ -10,7 +10,7 @@ on:
 
 jobs:
   Deploy-cloud-mail:
-    name: 🏗️ Build and Deploy
+    name: Build and Deploy
     runs-on: ubuntu-latest
 
     env:
@@ -39,57 +39,57 @@ jobs:
 
 
     steps:
-      - name: 🚚 检出代码仓库 / Checkout repository
+      - name: 检出代码仓库 / Checkout repository
         uses: actions/checkout@v4
 
-      - name: ⚙ 设置 pnpm / Set up pnpm
+      - name: 设置 pnpm / Set up pnpm
         uses: pnpm/action-setup@v4.1.0
         with:
           version: 9
 
-      - name: ⚙ 设置 Node.js / Set up Node.js
+      - name: 设置 Node.js / Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
           cache-dependency-path: "./mail-worker/pnpm-lock.yaml"
 
-      - name: 📦 安装依赖 / Install dependencies
+      - name: 安装依赖 / Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: ./mail-worker
 
-      - name: 📡 禁用 Wrangler 遥测 / Disable wrangler telemetry
+      - name: 禁用 Wrangler 遥测 / Disable wrangler telemetry
         working-directory: ./mail-worker
         run: pnpm wrangler telemetry disable
 
-      - name: 🛠️ 设置环境 / Set up environment
+      - name: 设置环境 / Set up environment
         working-directory: ./mail-worker
         run: |
           
-          echo "🔐 Starting environment setup..."
+          echo " Starting environment setup..."
           
           if [ -z "$JWT_SECRET" ] || grep -q '[?%#/\\]' <<< "$JWT_SECRET"; then
-            echo "❌ JWT_SECRET variable is empty or contains invalid characters (?, %, #, /, \\)."
+            echo " JWT_SECRET variable is empty or contains invalid characters (?, %, #, /, \\)."
             exit 1
           fi
           
           if ! jq -e 'type == "array"' <<< "$DOMAIN" ; then
-            echo "❌ DOMAIN variable must be a JSON array (e.g., [\"example.com\"])."
+            echo " DOMAIN variable must be a JSON array (e.g., [\"example.com\"])."
             exit 1
           fi
           
           if [ -z "$ADMIN" ]; then
-            echo "❌ ADMIN variable cannot be empty."
+            echo " ADMIN variable cannot be empty."
             exit 1
           fi
           
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "❌ CLOUDFLARE_ACCOUNT_ID variable cannot be empty."
+            echo " CLOUDFLARE_ACCOUNT_ID variable cannot be empty."
             exit 1
           fi
           
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "❌ CLOUDFLARE_API_TOKEN variable cannot be empty."
+            echo " CLOUDFLARE_API_TOKEN variable cannot be empty."
             exit 1
           fi
           
@@ -137,9 +137,9 @@ jobs:
           sed -i "s|\${LINUXDO_CALLBACK_URL}|${LINUXDO_CALLBACK_URL}|g" "$CONFIG_FILE"
           sed -i "s|\${LINUXDO_SWITCH}|${LINUXDO_SWITCH}|g" "$CONFIG_FILE"
           
-          echo "✅ Environment setup completed."
+          echo " Environment setup completed."
 
-      - name: ⚡ 设置KV数据库 / Set up KV database
+      - name:  设置KV数据库 / Set up KV database
         working-directory: ./mail-worker
         run: |
           
@@ -147,11 +147,11 @@ jobs:
           
           if [ -n "$KV_NAMESPACE_ID" ]; then
             sed -i "s|\${KV_NAMESPACE_ID}|${KV_NAMESPACE_ID}|g" "$CONFIG_FILE"
-            echo "✅ Using the database from environment variables."
+            echo " Using the database from environment variables."
             exit 0
           fi
           
-          echo "🔍 Checking if the database exists..."
+          echo " Checking if the database exists..."
           
           set +e
             KV_LIST=$(pnpm wrangler kv namespace list 2>&1)
@@ -164,20 +164,20 @@ jobs:
           fi
                   
           if echo "$KV_LIST" | jq -e ".[] | select(.title == \"$NAME\")" >/dev/null; then
-            echo "✅ Database $NAME already exists."
+            echo " Database $NAME already exists."
             KV_ID=$(echo "$KV_LIST" | jq -r ".[] | select(.title == \"$NAME\") | .id")
             echo "KV_NAMESPACE_ID: $KV_ID"
           else
-            echo "⚠️ Database $NAME does not exist. Starting creation..."
+            echo " Database $NAME does not exist. Starting creation..."
             pnpm wrangler kv namespace create $NAME
             KV_LIST=$(pnpm wrangler kv namespace list)
             KV_ID=$(echo "$KV_LIST" | jq -r ".[] | select(.title == \"$NAME\") | .id")
           fi
           
           sed -i "s|\${KV_NAMESPACE_ID}|$KV_ID|g" "$CONFIG_FILE"
-          echo "✅ Setup completed."
+          echo " Setup completed."
 
-      - name: 🐬 设置D1数据库 / Set up D1 database
+      - name:  设置D1数据库 / Set up D1 database
         working-directory: ./mail-worker
         run: |
           
@@ -185,11 +185,11 @@ jobs:
           
           if [ -n "$D1_DATABASE_ID" ]; then
             sed -i "s|\${D1_DATABASE_ID}|${D1_DATABASE_ID}|g" "$CONFIG_FILE"
-            echo "✅ Using the database from environment variables."
+            echo " Using the database from environment variables."
             exit 0
           fi
           
-          echo "🔍 Checking if the database exists..."
+          echo " Checking if the database exists..."
           
           set +e
             DB_LIST=$(pnpm wrangler d1 list --json 2>&1)
@@ -202,24 +202,24 @@ jobs:
           fi
           
           if echo "$DB_LIST" | jq -e ".[] | select(.name == \"$NAME\")" >/dev/null; then
-            echo "✅ Database $NAME already exists."
+            echo " Database $NAME already exists."
             D1_ID=$(echo "$DB_LIST" | jq -r ".[] | select(.name == \"$NAME\") | .uuid")
             echo "D1_DATABASE_ID: $D1_ID"
           else
-            echo "⚠️ Database $NAME does not exist. Starting creation..."
+            echo " Database $NAME does not exist. Starting creation..."
             pnpm wrangler d1 create $NAME
             DB_LIST=$(pnpm wrangler d1 list --json)
             D1_ID=$(echo "$DB_LIST" | jq -r ".[] | select(.name == \"$NAME\") | .uuid")
           fi
           
           sed -i "s|\${D1_DATABASE_ID}|$D1_ID|g" "$CONFIG_FILE"
-          echo "✅ Setup completed."
+          echo " Setup completed."
 
-      - name: 🚀 开始部署 / Start deployment
+      - name:  开始部署 / Start deployment
         id: deploy
         working-directory: ./mail-worker
         run: |
-          echo "🚀 Starting deployment..."
+          echo " Starting deployment..."
           pnpm wrangler deploy -c wrangler-action.toml 2>&1 \
             | tee deploy.log \
             | grep -v "https://.*\.workers\.dev" \
@@ -238,18 +238,18 @@ jobs:
           fi
           
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
-          echo "✅ Setup completed."
+          echo " Setup completed."
 
-      - name: ♻️ 初始化数据库 / Initialize database
+      - name:  初始化数据库 / Initialize database
         run: |
-          echo "🛠️ Starting database initialization..."
+          echo " Starting database initialization..."
           sleep 15
           
           WORKER_URL="${CUSTOM_DOMAIN:+https://$CUSTOM_DOMAIN}"
           WORKER_URL="${WORKER_URL:-${{ steps.deploy.outputs.worker_url }}}"
           
           if [ -z "$WORKER_URL" ]; then
-            echo "❌ Preview URL not available. Please set CUSTOM_DOMAIN."
+            echo " Preview URL not available. Please set CUSTOM_DOMAIN."
             exit 1
           fi
           
@@ -257,13 +257,13 @@ jobs:
           RESPONSE_BODY=$(cat response.txt)
 
           if [ "$RESPONSE_BODY" = "success" ]; then
-            echo "✅ Setup completed."
+            echo " Setup completed."
           else
-            echo "❌ Failed. HTTP: $HTTP_CODE, Response: $RESPONSE_BODY"
+            echo " Failed. HTTP: $HTTP_CODE, Response: $RESPONSE_BODY"
             exit 1
           fi
 
-      - name: 🗑️ 删除运行记录 / Delete workflow runs
+      - name:  删除运行记录 / Delete workflow runs
         uses: GitRML/delete-workflow-runs@main
         continue-on-error: true
         with:
